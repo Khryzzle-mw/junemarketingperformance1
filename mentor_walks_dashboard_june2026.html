@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentor Walks — June 2026 Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Arial', sans-serif; background: #f0f4f8; color: #1a1a2e; }
+  .header { background: linear-gradient(135deg, #1A5276 0%, #2980B9 100%); padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left h1 { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: .3px; }
+  .header-left p  { color: #AED6F1; font-size: 13px; margin-top: 3px; }
+  .header-badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 12px; padding: 5px 14px; border-radius: 20px; }
+  .kpi-header { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 0; padding: 24px 40px 0; align-items: start; }
+  .kpi-group { display: flex; flex-direction: column; gap: 0; }
+  .kpi-group-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; padding: 0 0 10px 4px; display: flex; align-items: center; gap: 8px; }
+  .kpi-group-label .glabel-dot { width: 8px; height: 8px; border-radius: 50%; display:inline-block; }
+  .kpi-group-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+  .kpi-divider { width: 1px; background: #d8e4f0; margin: 8px 24px 0; align-self: stretch; }
+  .kpi { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.07); border-top: 4px solid #2980B9; }
+  .kpi.accent1 { border-top-color: #1A5276; } .kpi.accent2 { border-top-color: #E67E22; } .kpi.accent3 { border-top-color: #0A66C2; }
+  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #7f8c8d; }
+  .kpi-value { font-size: 28px; font-weight: 700; color: #1A5276; margin: 6px 0 2px; }
+  .kpi-sub   { font-size: 12px; color: #95a5a6; }
+  .platform-kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-bottom: 28px; }
+  .platform-card { border-radius: 10px; padding: 22px 24px; box-shadow: 0 2px 8px rgba(0,0,0,.07); display: flex; flex-direction: column; gap: 10px; }
+  .platform-card.linkedin { background: linear-gradient(135deg,#0A66C2,#1e86e0); color:#fff; }
+  .platform-card.email    { background: linear-gradient(135deg,#1A5276,#2980B9); color:#fff; }
+  .platform-card.facebook { background: linear-gradient(135deg,#1877F2,#42a5f5); color:#fff; }
+  .platform-card h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; opacity: .85; }
+  .platform-card .p-orders { font-size: 36px; font-weight: 800; line-height: 1; }
+  .platform-card .p-meta { font-size: 12px; opacity: .8; }
+  .platform-bar-row { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .platform-bar-item { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .platform-bar-item .pbi-label { width: 130px; opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .platform-bar-item .pbi-track { flex:1; background:rgba(255,255,255,0.25); border-radius:4px; height:8px; }
+  .platform-bar-item .pbi-fill  { height:100%; border-radius:4px; background:rgba(255,255,255,0.7); }
+  .platform-bar-item .pbi-num   { min-width:20px; text-align:right; font-weight:700; }
+  .tabs-container { padding: 24px 40px 0; }
+  .top-tab-row { display: flex; gap: 4px; }
+  .top-tab { padding: 9px 26px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 700; cursor: pointer; border: none; color: #7f8c8d; background: #dce6f0; transition: all .2s; letter-spacing: .2px; }
+  .top-tab.tl-active { background: #EBF5FB; color: #1A5276; box-shadow: 0 -3px 0 #1A5276 inset; }
+  .top-tab.pc-active { background: #FDEDEC; color: #C0392B; box-shadow: 0 -3px 0 #E74C3C inset; }
+  .top-tab.li-active { background: #E8F1FB; color: #004182; box-shadow: 0 -3px 0 #0A66C2 inset; }
+  .top-tab:hover:not(.tl-active):not(.pc-active):not(.li-active) { background: #c8d8e8; }
+  .sub-tab-row { display: flex; gap: 2px; padding: 10px 2px 0; border-top: 1px solid #d8e4f0; background: #EBF5FB; }
+  .sub-tab-row.pc-sub { background: #FDEDEC; border-top-color: #f5c6c6; }
+  .sub-tab-row.li-sub { background: #E8F1FB; border-top-color: #b0cde8; }
+  .sub-tab-row.hidden { display: none; }
+  .sub-tab { padding: 6px 18px; border-radius: 6px 6px 0 0; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: #7f8c8d; transition: all .15s; }
+  .sub-tab.active { background: #fff; color: #1A5276; box-shadow: 0 -2px 0 #2980B9 inset; }
+  .sub-tab.pc-sub-tab.active { color: #C0392B; box-shadow: 0 -2px 0 #E74C3C inset; }
+  .sub-tab.li-sub-tab.active { color: #004182; box-shadow: 0 -2px 0 #0A66C2 inset; }
+  .sub-tab:hover:not(.active) { background: rgba(255,255,255,0.5); color: #2c3e50; }
+  .panel { display: none; background: #fff; margin: 0 40px 40px; border-radius: 0 10px 10px 10px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 30px; }
+  .panel.active { display: block; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #1A5276; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #D6EAF8; }
+  .section-title.li-title { color: #004182; border-bottom-color: #b0cde8; }
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  .chart-card { background: #f8fafc; border-radius: 8px; padding: 20px; border: 1px solid #e8eef4; }
+  .chart-card h3 { font-size: 12px; font-weight: 700; color: #5d6d7e; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 14px; }
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap.tall { height: 300px; }
+  .chart-wrap.xtall { height: 380px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr th { background: #1A5276; color: #fff; padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; letter-spacing: .3px; white-space: nowrap; }
+  thead tr th:first-child { border-radius: 6px 0 0 0; } thead tr th:last-child { border-radius: 0 6px 0 0; }
+  thead.li-head tr th { background: #0A66C2; }
+  tbody tr:nth-child(even) { background: #EBF5FB; }
+  tbody tr:hover { background: #D6EAF8; }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid #eaf0f6; color: #2c3e50; }
+  tfoot td { padding: 10px 14px; background: #f0f4f8; font-weight: 700; color: #1A5276; border-top: 2px solid #AED6F1; }
+  .li-kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+  .li-kpi { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.07); border-top: 4px solid #0A66C2; text-align: center; }
+  .li-kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #7f8c8d; }
+  .li-kpi-value { font-size: 26px; font-weight: 700; color: #004182; margin: 6px 0 2px; }
+  .li-kpi-sub   { font-size: 12px; color: #95a5a6; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .pill-blue{background:#D6EAF8;color:#1A5276} .pill-navy{background:#D0E8F2;color:#154360}
+  .pill-teal{background:#D1F2EB;color:#148F77} .pill-green{background:#D5F5E3;color:#1E8449}
+  .pill-orange{background:#FDEBD0;color:#E67E22} .pill-purple{background:#E8DAEF;color:#7D3C98}
+  .pill-grey{background:#EAECEE;color:#5D6D7E} .pill-red{background:#FADBD8;color:#C0392B}
+  .pill-brown{background:#FAE5D3;color:#D35400} .pill-li{background:#DBEAF8;color:#004182}
+  .pill-recap{background:#D1ECF1;color:#0C5460} .pill-promo{background:#D4EDDA;color:#155724}
+  .pill-video{background:#E2D9F3;color:#4B0082} .pill-general{background:#FFF3CD;color:#856404}
+  .bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .bar-track { flex: 1; background: #eaf0f6; border-radius: 4px; height: 8px; overflow: hidden; }
+  .bar-fill  { height: 100%; border-radius: 4px; background: linear-gradient(90deg,#2980B9,#1A5276); }
+  .bar-num   { font-size: 12px; font-weight: 700; color: #1A5276; min-width: 36px; text-align: right; }
+  .cad-badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: 700; background: #FEF9E7; color: #D4AC0D; border: 1px solid #F9E79F; vertical-align: middle; margin-left: 4px; }
+  .new-tag { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: 700; background: #D5F5E3; color: #1E8449; vertical-align: middle; margin-left: 4px; text-transform: uppercase; }
+  a.li-link { color: #0A66C2; text-decoration: none; font-size: 11px; }
+  a.li-link:hover { text-decoration: underline; }
+  .tag-chip { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; background:#E8F1FB; color:#004182; white-space:nowrap; }
+  .loc-chip { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; background:#EDF7EE; color:#155724; white-space:nowrap; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Mentor Walks — Marketing Comms &amp; Promo Performance</h1>
+    <p>6 Events · June 2026 · AUD figures unless noted · Canadian events reported in CAD</p>
+  </div>
+  <div class="header-badge">Cross-Event Report</div>
+</div>
+
+<div class="kpi-header">
+  <div class="kpi-group">
+    <div class="kpi-group-label" style="color:#1A5276"><span class="glabel-dot" style="background:#1A5276"></span> Tracking Links</div>
+    <div class="kpi-group-cards">
+      <div class="kpi accent1"><div class="kpi-label">Total Paid Orders</div><div class="kpi-value">28</div><div class="kpi-sub">Across 6 events</div></div>
+      <div class="kpi accent2"><div class="kpi-label">Net Revenue</div><div class="kpi-value">$945.45</div><div class="kpi-sub">$1,131.00 gross</div></div>
+      <div class="kpi accent3"><div class="kpi-label">Top Platform</div><div class="kpi-value" style="font-size:18px;margin-top:6px">Email</div><div class="kpi-sub">14 orders · 50% · emailjunreminder top link</div></div>
+    </div>
+  </div>
+  <div class="kpi-divider"></div>
+  <div class="kpi-group">
+    <div class="kpi-group-label" style="color:#C0392B"><span class="glabel-dot" style="background:#E74C3C"></span> Promo Codes</div>
+    <div class="kpi-group-cards">
+      <div class="kpi" style="border-top-color:#E74C3C"><div class="kpi-label">Total Promo Uses</div><div class="kpi-value">82</div><div class="kpi-sub">65 AUD · 17 CAD · 19 codes</div></div>
+      <div class="kpi" style="border-top-color:#E67E22"><div class="kpi-label">Discount Given (AUD)</div><div class="kpi-value">$2,222.80</div><div class="kpi-sub">+ CAD 520.88 Canadian events</div></div>
+      <div class="kpi" style="border-top-color:#27AE60"><div class="kpi-label">Top Code</div><div class="kpi-value" style="font-size:13px;margin-top:8px">MWSYDEVENTS26</div><div class="kpi-sub">16 uses · Sydney · Other Partner</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs-container">
+  <div class="top-tab-row">
+    <button class="top-tab tl-active" id="top-tl" onclick="showSection('tl')">Tracking Links</button>
+    <button class="top-tab" id="top-pc" onclick="showSection('pc')">Promo Codes</button>
+    <button class="top-tab" id="top-li" onclick="showSection('li')">LinkedIn Performance</button>
+  </div>
+  <div class="sub-tab-row" id="sub-tl">
+    <button class="sub-tab active" id="stab-summary"  onclick="showTab('summary','tl')">Summary by Tracking Link</button>
+    <button class="sub-tab"        id="stab-events"   onclick="showTab('events','tl')">By Event</button>
+    <button class="sub-tab"        id="stab-platform" onclick="showTab('platform','tl')">Platform Breakdown</button>
+  </div>
+  <div class="sub-tab-row pc-sub hidden" id="sub-pc">
+    <button class="sub-tab pc-sub-tab" id="stab-promo-type" onclick="showTab('promo-type','pc')">By Code Type</button>
+    <button class="sub-tab pc-sub-tab" id="stab-promo-city" onclick="showTab('promo-city','pc')">By City</button>
+    <button class="sub-tab pc-sub-tab" id="stab-promo-code" onclick="showTab('promo-code','pc')">By Promo Code</button>
+  </div>
+  <div class="sub-tab-row li-sub hidden" id="sub-li">
+    <button class="sub-tab li-sub-tab" id="stab-li-overview" onclick="showTab('li-overview','li')">Overview</button>
+    <button class="sub-tab li-sub-tab" id="stab-li-tags"     onclick="showTab('li-tags','li')">Content Tags &amp; Location</button>
+    <button class="sub-tab li-sub-tab" id="stab-li-daily"    onclick="showTab('li-daily','li')">Daily Trend</button>
+    <button class="sub-tab li-sub-tab" id="stab-li-posts"    onclick="showTab('li-posts','li')">All Posts</button>
+  </div>
+</div>
+
+<!-- TL: Summary -->
+<div id="tab-summary" class="panel active">
+  <div class="charts-row">
+    <div class="chart-card"><h3>Orders by Tracking Link</h3><div class="chart-wrap"><canvas id="chartOrders"></canvas></div></div>
+    <div class="chart-card"><h3>Net Revenue by Tracking Link (AUD)</h3><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
+  </div>
+  <div class="section-title">Tracking Link Breakdown</div>
+  <table><thead><tr><th>#</th><th>Tracking Link</th><th>Orders</th><th>Share of Orders</th><th>Tickets Sold</th><th>Gross Sales (AUD)</th><th>Net Revenue (AUD)</th></tr></thead>
+  <tbody id="tl-table-body"></tbody>
+  <tfoot><tr><td></td><td>TOTAL</td><td id="tl-total-orders"></td><td>100%</td><td id="tl-total-tickets"></td><td id="tl-total-gross"></td><td id="tl-total-rev"></td></tr></tfoot></table>
+</div>
+
+<!-- TL: Events -->
+<div id="tab-events" class="panel">
+  <div class="charts-row">
+    <div class="chart-card"><h3>Orders per City / Event</h3><div class="chart-wrap"><canvas id="chartEventOrders"></canvas></div></div>
+    <div class="chart-card"><h3>Revenue per City / Event (AUD)</h3><div class="chart-wrap"><canvas id="chartEventRevenue"></canvas></div></div>
+  </div>
+  <div class="section-title">Event Detail with Tracking Link Breakdown</div>
+  <table><thead><tr><th>City</th><th>Event Date</th><th>Orders</th><th>Net Revenue (AUD)</th><th>Top Link</th><th>emailjun</th><th>email-choosementor</th><th>email-2ndcta</th><th>email7day</th><th>li-nextevent</th><th>li-mentorspost</th><th>li-afterwalk</th><th>metaad</th></tr></thead>
+  <tbody id="event-table-body"></tbody>
+  <tfoot><tr><td>TOTAL</td><td></td><td id="ev-total-orders"></td><td id="ev-total-rev"></td><td></td><td id="ev-tl0"></td><td id="ev-tl1"></td><td id="ev-tl2"></td><td id="ev-tl3"></td><td id="ev-tl4"></td><td id="ev-tl5"></td><td id="ev-tl6"></td><td id="ev-tl7"></td></tr></tfoot></table>
+</div>
+
+<!-- TL: Platform -->
+<div id="tab-platform" class="panel">
+  <div class="platform-kpi-row" id="platform-cards"></div>
+  <div class="charts-row">
+    <div class="chart-card"><h3>Orders by Platform</h3><div class="chart-wrap"><canvas id="chartPlatformOrders"></canvas></div></div>
+    <div class="chart-card"><h3>Orders per Event by Platform</h3><div class="chart-wrap"><canvas id="chartPlatformByEvent"></canvas></div></div>
+  </div>
+  <div class="section-title">Platform &amp; Link Detail</div>
+  <table><thead><tr><th>Platform</th><th>Tracking Link</th><th>Orders</th><th>Share of Orders</th><th>Gross Sales (AUD)</th><th>Net Revenue (AUD)</th></tr></thead>
+  <tbody id="platform-table-body"></tbody>
+  <tfoot><tr><td colspan="2">TOTAL</td><td id="pt-total-orders"></td><td>100%</td><td id="pt-total-gross"></td><td id="pt-total-rev"></td></tr></tfoot></table>
+</div>
+
+<!-- PC: Type -->
+<div id="tab-promo-type" class="panel">
+  <div class="charts-row">
+    <div class="chart-card"><h3>Uses by Code Type (all events)</h3><div class="chart-wrap"><canvas id="chartPromoType"></canvas></div></div>
+    <div class="chart-card"><h3>Discount Given by Code Type — AUD events only</h3><div class="chart-wrap"><canvas id="chartPromoTypeRev"></canvas></div></div>
+  </div>
+  <div class="section-title">By Code Type</div>
+  <table><thead><tr><th>Code Type</th><th>Total Uses</th><th>Share of Uses</th><th>Discount (AUD events)</th><th>Discount (CAD events)</th></tr></thead>
+  <tbody id="promo-type-body"></tbody>
+  <tfoot><tr><td>TOTAL</td><td id="pt2-uses"></td><td>100%</td><td id="pt2-disc-aud"></td><td id="pt2-disc-cad"></td></tr></tfoot></table>
+</div>
+
+<!-- PC: City -->
+<div id="tab-promo-city" class="panel">
+  <div class="charts-row">
+    <div class="chart-card"><h3>Promo Uses by City (all events)</h3><div class="chart-wrap"><canvas id="chartPromoCity"></canvas></div></div>
+    <div class="chart-card"><h3>Code Type Mix by City</h3><div class="chart-wrap"><canvas id="chartPromoCityMix"></canvas></div></div>
+  </div>
+  <div class="section-title">By City</div>
+  <table><thead><tr><th>City</th><th>Event Date</th><th>Currency</th><th>Total Uses</th><th>Share of Uses</th><th>Discount Given</th><th>Top Code</th></tr></thead>
+  <tbody id="promo-city-body"></tbody>
+  <tfoot><tr><td>TOTAL</td><td></td><td></td><td id="pc-uses"></td><td>100%</td><td id="pc-disc"></td><td></td></tr></tfoot></table>
+</div>
+
+<!-- PC: Code -->
+<div id="tab-promo-code" class="panel">
+  <div class="section-title">By Promo Code</div>
+  <table><thead><tr><th>Code</th><th>Code Type</th><th>City</th><th>Event Date</th><th>Currency</th><th>Uses</th><th>Discount / Ticket</th><th>Total Discount</th></tr></thead>
+  <tbody id="promo-code-body"></tbody>
+  <tfoot><tr><td colspan="5">TOTAL</td><td id="pcode-uses"></td><td></td><td id="pcode-disc"></td></tr></tfoot></table>
+</div>
+
+<!-- LI: Overview -->
+<div id="tab-li-overview" class="panel">
+  <div class="li-kpi-row">
+    <div class="li-kpi"><div class="li-kpi-label">Impressions</div><div class="li-kpi-value">53,525</div><div class="li-kpi-sub">26,249 unique</div></div>
+    <div class="li-kpi"><div class="li-kpi-label">Total Clicks</div><div class="li-kpi-value">15,289</div><div class="li-kpi-sub">28.6% click rate</div></div>
+    <div class="li-kpi"><div class="li-kpi-label">Reactions</div><div class="li-kpi-value">1,271</div><div class="li-kpi-sub">94 comments · 65 reposts</div></div>
+    <div class="li-kpi"><div class="li-kpi-label">Avg Engagement Rate</div><div class="li-kpi-value">31.2%</div><div class="li-kpi-sub">30 posts published</div></div>
+  </div>
+  <div class="charts-row">
+    <div class="chart-card"><h3>Posts by Type</h3><div class="chart-wrap"><canvas id="chartLiPostType"></canvas></div></div>
+    <div class="chart-card"><h3>Impressions by Post Type</h3><div class="chart-wrap"><canvas id="chartLiTypeImp"></canvas></div></div>
+  </div>
+  <div class="section-title li-title">Top 10 Posts by Impressions</div>
+  <table><thead class="li-head"><tr><th>#</th><th>Post</th><th>Type</th><th>Date</th><th>Impressions</th><th>Clicks</th><th>Reactions</th><th>Eng. Rate</th><th>Link</th></tr></thead>
+  <tbody id="li-top-body"></tbody></table>
+</div>
+
+<!-- LI: Content Tags & Location -->
+<div id="tab-li-tags" class="panel">
+  <div class="section-title li-title">Content Tag Performance — Engagement Rate &amp; CTR</div>
+  <div class="chart-card" style="margin-bottom:28px">
+    <h3>Avg ER vs Avg CTR by Content Tag (sorted by ER)</h3>
+    <div class="chart-wrap xtall"><canvas id="chartTagPerf"></canvas></div>
+  </div>
+  <table style="margin-bottom:36px">
+    <thead class="li-head"><tr><th>Content Tag</th><th>Posts</th><th>Total Impressions</th><th>Avg CTR</th><th>Avg Engagement Rate</th></tr></thead>
+    <tbody id="li-tag-body"></tbody>
+  </table>
+
+  <div class="section-title li-title">Location Performance</div>
+  <div class="charts-row">
+    <div class="chart-card"><h3>Total Impressions by Location</h3><div class="chart-wrap tall"><canvas id="chartLocImp"></canvas></div></div>
+    <div class="chart-card"><h3>Avg ER &amp; CTR by Location</h3><div class="chart-wrap tall"><canvas id="chartLocPerf"></canvas></div></div>
+  </div>
+  <table>
+    <thead class="li-head"><tr><th>Location</th><th>Posts</th><th>Total Impressions</th><th>Avg CTR</th><th>Avg Engagement Rate</th></tr></thead>
+    <tbody id="li-loc-body"></tbody>
+  </table>
+</div>
+
+<!-- LI: Daily Trend -->
+<div id="tab-li-daily" class="panel">
+  <div class="chart-card" style="margin-bottom:24px">
+    <h3>Daily Impressions — June 2026 <span style="font-weight:400;color:#E74C3C;margin-left:8px">● = event day</span></h3>
+    <div class="chart-wrap tall"><canvas id="chartLiDaily"></canvas></div>
+  </div>
+  <div class="chart-card" style="margin-bottom:24px">
+    <h3>Daily Engagement Rate (%)</h3>
+    <div class="chart-wrap tall"><canvas id="chartLiEngRate"></canvas></div>
+  </div>
+  <div class="section-title li-title">Daily Metrics</div>
+  <table><thead class="li-head"><tr><th>Date</th><th>Impressions</th><th>Unique Imp.</th><th>Clicks</th><th>Reactions</th><th>Comments</th><th>Reposts</th><th>Eng. Rate</th></tr></thead>
+  <tbody id="li-daily-body"></tbody>
+  <tfoot><tr><td>TOTAL / AVG</td><td>53,525</td><td>26,249</td><td>15,289</td><td>1,271</td><td>94</td><td>65</td><td>31.2%</td></tr></tfoot></table>
+</div>
+
+<!-- LI: All Posts -->
+<div id="tab-li-posts" class="panel">
+  <div class="chart-card" style="margin-bottom:28px">
+    <h3>Top 15 Posts — Impressions</h3>
+    <div class="chart-wrap tall"><canvas id="chartLiAllPosts"></canvas></div>
+  </div>
+  <div class="section-title li-title">All Posts — June 2026</div>
+  <table><thead class="li-head"><tr><th>#</th><th>Post Title</th><th>Content Tag</th><th>Location</th><th>Audience</th><th>Date</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Reactions</th><th>Eng. Rate</th><th>Link</th></tr></thead>
+  <tbody id="li-posts-body"></tbody>
+  <tfoot><tr><td colspan="6">TOTAL</td><td id="li-total-imp"></td><td id="li-total-clicks"></td><td></td><td id="li-total-react"></td><td></td><td></td></tr></tfoot></table>
+</div>
+
+<script>
+function showSection(section) {
+  ['tl','pc','li'].forEach(s=>{
+    document.getElementById('top-'+s).className='top-tab'+(s===section?' '+s+'-active':'');
+    document.getElementById('sub-'+s).classList.toggle('hidden',s!==section);
+  });
+  if(section==='tl'){showTab('summary','tl');document.getElementById('stab-summary').classList.add('active');}
+  else if(section==='pc'){showTab('promo-type','pc');document.getElementById('stab-promo-type').classList.add('active');}
+  else{showTab('li-overview','li');document.getElementById('stab-li-overview').classList.add('active');}
+}
+function showTab(name,section){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const sec=section||(name.startsWith('promo')?'pc':name.startsWith('li-')?'li':'tl');
+  document.querySelectorAll(sec==='tl'?'#sub-tl .sub-tab':sec==='pc'?'#sub-pc .sub-tab':'#sub-li .sub-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  const btn=document.getElementById('stab-'+name);if(btn)btn.classList.add('active');
+}
+
+// ── Tracking Links ──
+const DATA={
+  tl_summary:[
+    {link:'emailjunreminder',           orders:6,tickets:6,gross:234.00,revenue:195.15,isNew:false},
+    {link:'emailchooseyourmentor',       orders:4,tickets:4,gross:180.00,revenue:150.80,isNew:true},
+    {link:'linkedinnextevent',           orders:4,tickets:4,gross:180.00,revenue:150.80,isNew:false},
+    {link:'linkedinafterwalk',           orders:4,tickets:4,gross:156.00,revenue:130.10,isNew:false},
+    {link:'metaad',                      orders:3,tickets:3,gross:135.00,revenue:113.10,isNew:false},
+    {link:'linkedinmentorspost',         orders:3,tickets:3,gross: 78.00,revenue: 65.05,isNew:false},
+    {link:'emailchooseyourmentor2ndcta', orders:2,tickets:2,gross: 90.00,revenue: 75.40,isNew:true},
+    {link:'email7dayreminder',           orders:2,tickets:2,gross: 78.00,revenue: 65.05,isNew:false}
+  ],
+  tracking_links:['emailjunreminder','emailchooseyourmentor','emailchooseyourmentor2ndcta','email7dayreminder','linkedinnextevent','linkedinmentorspost','linkedinafterwalk','metaad'],
+  events:[
+    {city:'Melbourne',date:'12 Jun 2026',orders:6,tickets:6,gross:270.00,revenue:226.20,top_link:'emailjunreminder',tl_counts:{emailjunreminder:2,emailchooseyourmentor:0,emailchooseyourmentor2ndcta:0,email7dayreminder:0,linkedinnextevent:2,linkedinmentorspost:0,linkedinafterwalk:2,metaad:0}},
+    {city:'Wollongong',date:'17 Jun 2026',orders:1,tickets:1,gross:33.00,revenue:27.35,top_link:'linkedinmentorspost',tl_counts:{emailjunreminder:0,emailchooseyourmentor:0,emailchooseyourmentor2ndcta:0,email7dayreminder:0,linkedinnextevent:0,linkedinmentorspost:1,linkedinafterwalk:0,metaad:0}},
+    {city:'Virtual',date:'18 Jun 2026',orders:2,tickets:2,gross:66.00,revenue:54.70,top_link:'emailjunreminder',tl_counts:{emailjunreminder:1,emailchooseyourmentor:0,emailchooseyourmentor2ndcta:0,email7dayreminder:0,linkedinnextevent:0,linkedinmentorspost:0,linkedinafterwalk:1,metaad:0}},
+    {city:'Newcastle',date:'18 Jun 2026',orders:4,tickets:4,gross:135.00,revenue:113.10,top_link:'linkedinmentorspost',tl_counts:{emailjunreminder:1,emailchooseyourmentor:0,emailchooseyourmentor2ndcta:0,email7dayreminder:1,linkedinnextevent:0,linkedinmentorspost:2,linkedinafterwalk:0,metaad:0}},
+    {city:'Adelaide',date:'25 Jun 2026',orders:4,tickets:4,gross:132.00,revenue:109.40,top_link:'emailjunreminder',tl_counts:{emailjunreminder:2,emailchooseyourmentor:0,emailchooseyourmentor2ndcta:0,email7dayreminder:1,linkedinnextevent:0,linkedinmentorspost:0,linkedinafterwalk:1,metaad:0}},
+    {city:'Sydney',date:'26 Jun 2026',orders:11,tickets:11,gross:495.00,revenue:414.70,top_link:'emailchooseyourmentor',tl_counts:{emailjunreminder:0,emailchooseyourmentor:4,emailchooseyourmentor2ndcta:2,email7dayreminder:0,linkedinnextevent:2,linkedinmentorspost:0,linkedinafterwalk:0,metaad:3}}
+  ]
+};
+const TL_COLORS=['#1A5276','#2980B9','#16A085','#D35400','#27AE60','#8E44AD','#E67E22','#E74C3C'];
+const TL_LABELS={emailjunreminder:'emailjun',emailchooseyourmentor:'email-choosementor',emailchooseyourmentor2ndcta:'email-2ndcta',email7dayreminder:'email7day',linkedinnextevent:'li-nextevent',linkedinmentorspost:'li-mentorspost',linkedinafterwalk:'li-afterwalk',metaad:'metaad'};
+const PILL_CLASSES=['pill-blue','pill-navy','pill-teal','pill-brown','pill-green','pill-purple','pill-orange','pill-red'];
+function fmt(n){return '$'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+function fmtC(n,c){return(c==='CAD'?'CAD ':'$')+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+function fmtN(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+
+(function buildSummary(){
+  const tbody=document.getElementById('tl-table-body');
+  const total=DATA.tl_summary.reduce((s,r)=>s+r.orders,0);let tO=0,tT=0,tG=0,tR=0;
+  DATA.tl_summary.forEach((row,i)=>{const pct=(row.orders/total*100).toFixed(1);tO+=row.orders;tT+=row.tickets;tG+=row.gross;tR+=row.revenue;const nt=row.isNew?'<span class="new-tag">New</span>':'';tbody.innerHTML+=`<tr><td style="color:#aaa;font-size:12px">${i+1}</td><td><span class="pill ${PILL_CLASSES[i]}">${TL_LABELS[row.link]}</span>${nt}</td><td>${row.orders}</td><td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${TL_COLORS[i]}"></div></div><div class="bar-num">${pct}%</div></div></td><td>${row.tickets}</td><td>${fmt(row.gross)}</td><td>${fmt(row.revenue)}</td></tr>`;});
+  document.getElementById('tl-total-orders').textContent=tO;document.getElementById('tl-total-tickets').textContent=tT;document.getElementById('tl-total-gross').textContent=fmt(tG);document.getElementById('tl-total-rev').textContent=fmt(tR);
+})();
+new Chart(document.getElementById('chartOrders'),{type:'bar',data:{labels:DATA.tl_summary.map(r=>TL_LABELS[r.link]),datasets:[{data:DATA.tl_summary.map(r=>r.orders),backgroundColor:TL_COLORS,borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#eaf0f6'}}}}});
+new Chart(document.getElementById('chartRevenue'),{type:'bar',data:{labels:DATA.tl_summary.map(r=>TL_LABELS[r.link]),datasets:[{data:DATA.tl_summary.map(r=>r.revenue),backgroundColor:TL_COLORS,borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#eaf0f6'},ticks:{callback:v=>'$'+v}}}}});
+
+(function buildEvents(){
+  const tbody=document.getElementById('event-table-body');const tls=DATA.tracking_links;let tO=0,tR=0,tlT=tls.map(()=>0);
+  DATA.events.forEach(ev=>{tO+=ev.orders;tR+=ev.revenue;const ti=DATA.tl_summary.findIndex(r=>r.link===ev.top_link);const cells=tls.map((tl,j)=>{const ci=DATA.tl_summary.findIndex(r=>r.link===tl);const c=ev.tl_counts[tl]||0;tlT[j]+=c;return c>0?`<td><span style="background:${TL_COLORS[ci]};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">${c}</span></td>`:`<td style="color:#ddd">—</td>`;}).join('');tbody.innerHTML+=`<tr><td style="font-weight:600">${ev.city}</td><td>${ev.date}</td><td>${ev.orders}</td><td>${fmt(ev.revenue)}</td><td><span class="pill ${PILL_CLASSES[ti>=0?ti:6]}">${TL_LABELS[ev.top_link]}</span></td>${cells}</tr>`;});
+  document.getElementById('ev-total-orders').textContent=tO;document.getElementById('ev-total-rev').textContent=fmt(tR);tls.forEach((_,j)=>{document.getElementById('ev-tl'+j).textContent=tlT[j]||'—';});
+})();
+new Chart(document.getElementById('chartEventOrders'),{type:'bar',data:{labels:DATA.events.map(e=>e.city),datasets:[{data:DATA.events.map(e=>e.orders),backgroundColor:TL_COLORS,borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#eaf0f6'}}}}});
+new Chart(document.getElementById('chartEventRevenue'),{type:'bar',data:{labels:DATA.events.map(e=>e.city),datasets:[{data:DATA.events.map(e=>e.revenue),backgroundColor:TL_COLORS,borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#eaf0f6'},ticks:{callback:v=>'$'+v}}}}});
+
+const PLATFORMS=[
+  {key:'email',label:'Email',cls:'email',color:'#1A5276',links:['emailjunreminder','emailchooseyourmentor','emailchooseyourmentor2ndcta','email7dayreminder'],linkLabels:['Jun Reminder','Choose Mentor','Choose Mentor 2nd CTA','7-Day Reminder']},
+  {key:'linkedin',label:'LinkedIn',cls:'linkedin',color:'#0A66C2',links:['linkedinnextevent','linkedinmentorspost','linkedinafterwalk'],linkLabels:['Next Event','Mentors Post','After Walk']},
+  {key:'facebook',label:'Facebook',cls:'facebook',color:'#1877F2',links:['metaad'],linkLabels:['Meta Ad']}
+];
+const tlMap={};DATA.tl_summary.forEach(r=>{tlMap[r.link]=r;});
+PLATFORMS.forEach(p=>{p.orders=p.links.reduce((s,tl)=>s+(tlMap[tl]?.orders||0),0);p.gross=p.links.reduce((s,tl)=>s+(tlMap[tl]?.gross||0),0);p.revenue=p.links.reduce((s,tl)=>s+(tlMap[tl]?.revenue||0),0);});
+const totalOrders=PLATFORMS.reduce((s,p)=>s+p.orders,0);
+(function buildPlatform(){
+  const cards=document.getElementById('platform-cards');
+  PLATFORMS.forEach(p=>{const pct=(p.orders/totalOrders*100).toFixed(1);const lr=p.links.map((tl,j)=>{const o=tlMap[tl]?.orders||0;const w=p.orders>0?(o/p.orders*100).toFixed(0):0;const isNew=DATA.tl_summary.find(r=>r.link===tl)?.isNew;return`<div class="platform-bar-item"><div class="pbi-label">${p.linkLabels[j]}${isNew?' <span style="font-size:9px;background:rgba(255,255,255,0.3);border-radius:6px;padding:1px 5px">NEW</span>':''}</div><div class="pbi-track"><div class="pbi-fill" style="width:${w}%"></div></div><div class="pbi-num">${o}</div></div>`;}).join('');cards.innerHTML+=`<div class="platform-card ${p.cls}"><h2>${p.label}</h2><div class="p-orders">${p.orders} <span style="font-size:16px;font-weight:400;opacity:.8">orders</span></div><div class="p-meta">${pct}% of total · ${fmt(p.revenue)} net revenue</div><div class="platform-bar-row">${lr}</div></div>`;});
+  new Chart(document.getElementById('chartPlatformOrders'),{type:'doughnut',data:{labels:PLATFORMS.map(p=>p.label),datasets:[{data:PLATFORMS.map(p=>p.orders),backgroundColor:PLATFORMS.map(p=>p.color),borderWidth:3,borderColor:'#fff',hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{font:{size:12},padding:16,usePointStyle:true}}}}});
+  new Chart(document.getElementById('chartPlatformByEvent'),{type:'bar',data:{labels:DATA.events.map(e=>e.city),datasets:PLATFORMS.map(p=>({label:p.label,data:DATA.events.map(ev=>p.links.reduce((s,tl)=>s+(ev.tl_counts[tl]||0),0)),backgroundColor:p.color,borderRadius:4,borderSkipped:false}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},usePointStyle:true,padding:12}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#eaf0f6'}}}}});
+  const tbody=document.getElementById('platform-table-body');let tO=0,tG=0,tR=0;
+  PLATFORMS.forEach(p=>{tO+=p.orders;tG+=p.gross;tR+=p.revenue;const pct=(p.orders/totalOrders*100).toFixed(1);tbody.innerHTML+=`<tr style="background:${p.color}10;border-left:4px solid ${p.color}"><td style="font-weight:700;color:${p.color}">${p.label}</td><td style="color:#888;font-size:12px">${p.links.length} link${p.links.length>1?'s':''}</td><td style="font-weight:700">${p.orders}</td><td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${p.color}"></div></div><div class="bar-num" style="color:${p.color}">${pct}%</div></div></td><td style="font-weight:700">${fmt(p.gross)}</td><td style="font-weight:700">${fmt(p.revenue)}</td></tr>`;p.links.forEach((tl,j)=>{const r=tlMap[tl]||{orders:0,gross:0,revenue:0};const lp=p.orders>0?(r.orders/p.orders*100).toFixed(1):'0.0';const isNew=DATA.tl_summary.find(row=>row.link===tl)?.isNew;tbody.innerHTML+=`<tr><td style="color:#bbb;font-size:11px;padding-left:24px">↳ ${p.label}</td><td><span class="pill" style="background:${p.color}20;color:${p.color}">${tl}</span>${isNew?'<span class="new-tag">New</span>':''}</td><td>${r.orders}</td><td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${lp}%;background:${p.color};opacity:.6"></div></div><div class="bar-num" style="color:${p.color}">${lp}%</div></div></td><td>${fmt(r.gross)}</td><td>${fmt(r.revenue)}</td></tr>`;});});
+  document.getElementById('pt-total-orders').textContent=tO;document.getElementById('pt-total-gross').textContent=fmt(tG);document.getElementById('pt-total-rev').textContent=fmt(tR);
+})();
+
+// ── Promo ──
+const PROMO={
+  byType:[
+    {type:'Free Ticket',  usesAUD:28,usesCAD:12,totalUses:40,discAUD:869.30,discCAD:367.68,color:'#E74C3C'},
+    {type:'Mentor Code',  usesAUD:17,usesCAD:2, totalUses:19,discAUD:620.20,discCAD:61.28, color:'#27AE60'},
+    {type:'Other Partner',usesAUD:16,usesCAD:0, totalUses:16,discAUD:603.20,discCAD:0,     color:'#8E44AD'},
+    {type:'LC Partner',   usesAUD:4, usesCAD:3, totalUses:7, discAUD:130.10,discCAD:91.92, color:'#2980B9'}
+  ],
+  byCity:[
+    {city:'Sydney',    date:'26 Jun 2026',uses:25,discount:942.50, topCode:'MWSYDEVENTS26',   currency:'AUD'},
+    {city:'Newcastle', date:'18 Jun 2026',uses:10,discount:377.00, topCode:'MWNEWFREE18JUN26', currency:'AUD'},
+    {city:'Adelaide',  date:'25 Jun 2026',uses:10,discount:273.50, topCode:'MWADEFREE25JUN26', currency:'AUD'},
+    {city:'Calgary',   date:'17 Jun 2026',uses:9, discount:275.76, topCode:'MWCALFREE17JUN26', currency:'CAD'},
+    {city:'Melbourne', date:'12 Jun 2026',uses:8, discount:301.60, topCode:'MWMELBMENTOR2026', currency:'AUD'},
+    {city:'Vancouver', date:'17 Jun 2026',uses:8, discount:245.12, topCode:'MWVANFREE17JUN26', currency:'CAD'},
+    {city:'Parramatta',date:'02 Jul 2026',uses:6, discount:164.10, topCode:'MWPARFREE2JUL26',  currency:'AUD'},
+    {city:'Wollongong',date:'17 Jun 2026',uses:4, discount:109.40, topCode:'MWWOLMENTOR2026',  currency:'AUD'},
+    {city:'Virtual',   date:'18 Jun 2026',uses:2, discount:54.70,  topCode:'MWLCVIR2026',      currency:'AUD'}
+  ],
+  byCodes:[
+    {code:'MWSYDEVENTS26',   type:'Other Partner',city:'Sydney',    date:'26 Jun 2026',uses:16,discPer:37.70,totalDisc:603.20,currency:'AUD'},
+    {code:'MWADEFREE25JUN26',type:'Free Ticket',  city:'Adelaide',  date:'25 Jun 2026',uses:9, discPer:27.35,totalDisc:246.15,currency:'AUD'},
+    {code:'MWCALFREE17JUN26',type:'Free Ticket',  city:'Calgary',   date:'17 Jun 2026',uses:8, discPer:30.64,totalDisc:245.12,currency:'CAD'},
+    {code:'MWMELBMENTOR2026',type:'Mentor Code',  city:'Melbourne', date:'12 Jun 2026',uses:7, discPer:37.70,totalDisc:263.90,currency:'AUD'},
+    {code:'MWPARFREE2JUL26', type:'Free Ticket',  city:'Parramatta',date:'02 Jul 2026',uses:6, discPer:27.35,totalDisc:164.10,currency:'AUD'},
+    {code:'MWNEWFREE18JUN26',type:'Free Ticket',  city:'Newcastle', date:'18 Jun 2026',uses:5, discPer:37.70,totalDisc:188.50,currency:'AUD'},
+    {code:'MWSYDFREE26JUN26',type:'Free Ticket',  city:'Sydney',    date:'26 Jun 2026',uses:5, discPer:37.70,totalDisc:188.50,currency:'AUD'},
+    {code:'MWSYDMENTOR2026', type:'Mentor Code',  city:'Sydney',    date:'26 Jun 2026',uses:4, discPer:37.70,totalDisc:150.80,currency:'AUD'},
+    {code:'MWNEWMENTOR2026', type:'Mentor Code',  city:'Newcastle', date:'18 Jun 2026',uses:4, discPer:37.70,totalDisc:150.80,currency:'AUD'},
+    {code:'MWVANFREE17JUN26',type:'Free Ticket',  city:'Vancouver', date:'17 Jun 2026',uses:4, discPer:30.64,totalDisc:122.56,currency:'CAD'},
+    {code:'MWLCVAN2026',     type:'LC Partner',   city:'Vancouver', date:'17 Jun 2026',uses:3, discPer:30.64,totalDisc:91.92, currency:'CAD'},
+    {code:'MWWOLFREE17JUN26',type:'Free Ticket',  city:'Wollongong',date:'17 Jun 2026',uses:3, discPer:27.35,totalDisc:82.05, currency:'AUD'},
+    {code:'MWLCVIR2026',     type:'LC Partner',   city:'Virtual',   date:'18 Jun 2026',uses:2, discPer:27.35,totalDisc:54.70, currency:'AUD'},
+    {code:'MWLCMEL2026',     type:'LC Partner',   city:'Melbourne', date:'12 Jun 2026',uses:1, discPer:37.70,totalDisc:37.70, currency:'AUD'},
+    {code:'MWWOLMENTOR2026', type:'Mentor Code',  city:'Wollongong',date:'17 Jun 2026',uses:1, discPer:27.35,totalDisc:27.35, currency:'AUD'},
+    {code:'MWLCNEW2026',     type:'LC Partner',   city:'Newcastle', date:'18 Jun 2026',uses:1, discPer:37.70,totalDisc:37.70, currency:'AUD'},
+    {code:'MWADEMENTOR2026', type:'Mentor Code',  city:'Adelaide',  date:'25 Jun 2026',uses:1, discPer:27.35,totalDisc:27.35, currency:'AUD'},
+    {code:'MWVANMENTOR2026', type:'Mentor Code',  city:'Vancouver', date:'17 Jun 2026',uses:1, discPer:30.64,totalDisc:30.64, currency:'CAD'},
+    {code:'MWCALMENTOR2026', type:'Mentor Code',  city:'Calgary',   date:'17 Jun 2026',uses:1, discPer:30.64,totalDisc:30.64, currency:'CAD'}
+  ]
+};
+const TYPE_PILLS={'Free Ticket':'background:#FADBD8;color:#C0392B','LC Partner':'background:#D6EAF8;color:#1A5276','Mentor Code':'background:#D5F5E3;color:#1E8449','Other Partner':'background:#E8DAEF;color:#7D3C98'};
+const CITY_COLORS=['#1A5276','#2980B9','#E74C3C','#27AE60','#8E44AD','#D4AC0D','#E67E22','#16A085','#7F8C8D'];
+(function buildPromo(){
+  const p=PROMO;const totalUses=82;
+  new Chart(document.getElementById('chartPromoType'),{type:'doughnut',data:{labels:p.byType.map(t=>t.type),datasets:[{data:p.byType.map(t=>t.totalUses),backgroundColor:p.byType.map(t=>t.color),borderWidth:3,borderColor:'#fff',hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:14,usePointStyle:true}}}}});
+  new Chart(document.getElementById('chartPromoTypeRev'),{type:'bar',data:{labels:p.byType.map(t=>t.type),datasets:[{data:p.byType.map(t=>t.discAUD),backgroundColor:p.byType.map(t=>t.color),borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#eaf0f6'},ticks:{callback:v=>'$'+v}}}}});
+  const tb=document.getElementById('promo-type-body');p.byType.forEach(t=>{const pct=(t.totalUses/totalUses*100).toFixed(1);tb.innerHTML+=`<tr><td><span class="pill" style="${TYPE_PILLS[t.type]}">${t.type}</span></td><td style="text-align:center">${t.totalUses}</td><td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${t.color}"></div></div><div class="bar-num" style="color:${t.color}">${pct}%</div></div></td><td style="text-align:center">${fmt(t.discAUD)}</td><td style="text-align:center">${t.discCAD>0?'CAD '+t.discCAD.toFixed(2):'—'}</td></tr>`;});
+  document.getElementById('pt2-uses').textContent=totalUses;document.getElementById('pt2-disc-aud').textContent=fmt(2222.80);document.getElementById('pt2-disc-cad').textContent='CAD 520.88';
+  new Chart(document.getElementById('chartPromoCity'),{type:'bar',data:{labels:p.byCity.map(c=>c.city+(c.currency==='CAD'?' (CAD)':'')),datasets:[{data:p.byCity.map(c=>c.uses),backgroundColor:CITY_COLORS,borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#eaf0f6'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+  const typeKeys=p.byType.map(t=>t.type);const cityTypeCounts={};typeKeys.forEach(tk=>{cityTypeCounts[tk]=p.byCity.map(()=>0);});p.byCodes.forEach(c=>{const ci=p.byCity.findIndex(x=>x.city===c.city);if(ci>=0)cityTypeCounts[c.type][ci]+=c.uses;});
+  new Chart(document.getElementById('chartPromoCityMix'),{type:'bar',data:{labels:p.byCity.map(c=>c.city+(c.currency==='CAD'?' (CAD)':'')),datasets:typeKeys.map((tk,i)=>({label:tk,data:cityTypeCounts[tk],backgroundColor:p.byType[i].color,borderRadius:2,borderSkipped:false}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},usePointStyle:true,padding:10}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,grid:{color:'#eaf0f6'}}}}});
+  const cb=document.getElementById('promo-city-body');p.byCity.forEach((c,i)=>{const pct=(c.uses/totalUses*100).toFixed(1);const cad=c.currency==='CAD'?'<span class="cad-badge">CAD</span>':'';cb.innerHTML+=`<tr><td style="font-weight:600">${c.city}${cad}</td><td>${c.date}</td><td><span style="font-size:11px;font-weight:700;color:${c.currency==='CAD'?'#D4AC0D':'#1A5276'}">${c.currency}</span></td><td style="text-align:center">${c.uses}</td><td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${CITY_COLORS[i]}"></div></div><div class="bar-num" style="color:${CITY_COLORS[i]}">${pct}%</div></div></td><td style="text-align:center">${fmtC(c.discount,c.currency)}</td><td><span class="pill pill-grey" style="font-size:10px">${c.topCode}</span></td></tr>`;});
+  document.getElementById('pc-uses').textContent=totalUses;document.getElementById('pc-disc').textContent=fmt(2222.80)+' AUD · CAD 520.88';
+  const xb=document.getElementById('promo-code-body');p.byCodes.forEach(c=>{const cad=c.currency==='CAD'?'<span class="cad-badge">CAD</span>':'';xb.innerHTML+=`<tr><td><code style="font-size:11px;background:#f4f6f8;padding:2px 6px;border-radius:4px">${c.code}</code></td><td><span class="pill" style="${TYPE_PILLS[c.type]}">${c.type}</span></td><td style="font-weight:600">${c.city}${cad}</td><td>${c.date}</td><td><span style="font-size:11px;font-weight:700;color:${c.currency==='CAD'?'#D4AC0D':'#1A5276'}">${c.currency}</span></td><td style="text-align:center;font-weight:700">${c.uses}</td><td style="text-align:center">${fmtC(c.discPer,c.currency)}</td><td style="text-align:center;font-weight:700">${fmtC(c.totalDisc,c.currency)}</td></tr>`;});
+  document.getElementById('pcode-uses').textContent=totalUses;document.getElementById('pcode-disc').textContent=fmt(2222.80)+' AUD + CAD 520.88';
+})();
+
+// ── LinkedIn Data ──
+const LI={
+  daily:[
+    {date:'Jun 1', imp:1296,uniq:686, clicks:233,react:41,comm:1,rep:4, eng:0.2153},
+    {date:'Jun 2', imp:1535,uniq:831, clicks:346,react:33,comm:1,rep:1, eng:0.2482},
+    {date:'Jun 3', imp:981, uniq:495, clicks:281,react:11,comm:0,rep:3, eng:0.3007},
+    {date:'Jun 4', imp:3704,uniq:1963,clicks:559,react:73,comm:4,rep:8, eng:0.1739},
+    {date:'Jun 5', imp:1025,uniq:522, clicks:241,react:19,comm:0,rep:0, eng:0.2537},
+    {date:'Jun 6', imp:381, uniq:237, clicks:74, react:15,comm:0,rep:0, eng:0.2310},
+    {date:'Jun 7', imp:768, uniq:421, clicks:185,react:30,comm:2,rep:0, eng:0.2826},
+    {date:'Jun 8', imp:895, uniq:455, clicks:91, react:19,comm:0,rep:1, eng:0.1240},
+    {date:'Jun 9', imp:736, uniq:352, clicks:123,react:16,comm:0,rep:0, eng:0.1889},
+    {date:'Jun 10',imp:1859,uniq:801, clicks:340,react:24,comm:2,rep:2, eng:0.1980},
+    {date:'Jun 11',imp:1007,uniq:488, clicks:209,react:25,comm:3,rep:4, eng:0.2393},
+    {date:'Jun 12',imp:3691,uniq:1756,clicks:1526,react:89,comm:12,rep:5,eng:0.4422,event:'Melbourne'},
+    {date:'Jun 13',imp:1439,uniq:709, clicks:482,react:37,comm:1,rep:1, eng:0.3621},
+    {date:'Jun 14',imp:1349,uniq:712, clicks:530,react:33,comm:1,rep:0, eng:0.4181},
+    {date:'Jun 15',imp:1295,uniq:701, clicks:355,react:21,comm:0,rep:1, eng:0.2911},
+    {date:'Jun 16',imp:845, uniq:442, clicks:134,react:18,comm:1,rep:1, eng:0.1822},
+    {date:'Jun 17',imp:3915,uniq:1766,clicks:1057,react:97,comm:11,rep:3,eng:0.2983,event:'Wollongong/Calgary/Vancouver'},
+    {date:'Jun 18',imp:7828,uniq:3012,clicks:2894,react:190,comm:19,rep:10,eng:0.3977,event:'Newcastle/Virtual'},
+    {date:'Jun 19',imp:2113,uniq:1088,clicks:779,react:65,comm:9,rep:2, eng:0.4046},
+    {date:'Jun 20',imp:1054,uniq:557, clicks:387,react:33,comm:1,rep:0, eng:0.3994},
+    {date:'Jun 21',imp:962, uniq:560, clicks:346,react:21,comm:6,rep:0, eng:0.3877},
+    {date:'Jun 22',imp:1271,uniq:623, clicks:399,react:26,comm:0,rep:3, eng:0.3367},
+    {date:'Jun 23',imp:833, uniq:417, clicks:208,react:13,comm:0,rep:0, eng:0.2653},
+    {date:'Jun 24',imp:1112,uniq:524, clicks:303,react:22,comm:2,rep:0, eng:0.2941},
+    {date:'Jun 25',imp:3966,uniq:1761,clicks:912,react:103,comm:9,rep:7,eng:0.2600,event:'Adelaide'},
+    {date:'Jun 26',imp:4060,uniq:2265,clicks:1284,react:115,comm:7,rep:6,eng:0.3478,event:'Sydney'},
+    {date:'Jun 27',imp:1089,uniq:610, clicks:322,react:22,comm:0,rep:0, eng:0.3159},
+    {date:'Jun 28',imp:996, uniq:578, clicks:320,react:26,comm:1,rep:0, eng:0.3484},
+    {date:'Jun 29',imp:1048,uniq:622, clicks:234,react:14,comm:1,rep:3, eng:0.2405},
+    {date:'Jun 30',imp:472, uniq:295, clicks:135,react:20,comm:0,rep:0, eng:0.3284}
+  ],
+  posts:[
+    {title:'Sydney Walk Recap',          contentTag:'After walk post',                location:'Sydney',     date:'Jun 25',type:'Walk Recap', audience:'All followers',imp:4735,clicks:1642,ctr:0.3468,likes:151,comments:4, reposts:7, eng:0.3810,url:'https://www.linkedin.com/feed/update/urn:li:activity:7476058442093211649'},
+    {title:'Brisbane Community Promo',   contentTag:'4 weeks out - Mentor Branded',   location:'Brisbane',   date:'Jun 25',type:'Event Promo',audience:'Targeted',     imp:1556,clicks:87,  ctr:0.0559,likes:37, comments:2, reposts:4, eng:0.0835,url:'https://www.linkedin.com/feed/update/urn:li:activity:7476049088866578432'},
+    {title:'Perth Community Promo',      contentTag:'4 weeks out - Sample Question',  location:'Perth',      date:'Jun 25',type:'Event Promo',audience:'Targeted',     imp:104, clicks:56,  ctr:0.5385,likes:0,  comments:0, reposts:0, eng:0.5385,url:'https://www.linkedin.com/feed/update/urn:li:activity:7476046579259330560'},
+    {title:'Multi-City July Promo',      contentTag:'All events',                     location:'All',        date:'Jun 25',type:'Event Promo',audience:'All followers',imp:1252,clicks:228, ctr:0.1821,likes:22, comments:1, reposts:0, eng:0.2005,url:'https://www.linkedin.com/feed/update/urn:li:activity:7475721946207367169'},
+    {title:'Adelaide Walk Recap',        contentTag:'After walk post',                location:'Adelaide',   date:'Jun 24',type:'Walk Recap', audience:'All followers',imp:2939,clicks:834, ctr:0.2838,likes:74, comments:9, reposts:6, eng:0.3141,url:'https://www.linkedin.com/feed/update/urn:li:activity:7475698592687620096'},
+    {title:'Auckland Walk Recap',        contentTag:'After walk post',                location:'Auckland',   date:'Jun 24',type:'Walk Recap', audience:'All followers',imp:1565,clicks:270, ctr:0.1725,likes:51, comments:2, reposts:4, eng:0.2089,url:'https://www.linkedin.com/feed/update/urn:li:activity:7475681092243443713'},
+    {title:'Parramatta Jul 2 Promo',     contentTag:'2 weeks out - Mentor post',      location:'Parramatta', date:'Jun 18',type:'Event Promo',audience:'Targeted',     imp:582, clicks:258, ctr:0.4433,likes:19, comments:0, reposts:1, eng:0.4777,url:'https://www.linkedin.com/feed/update/urn:li:activity:7473271329149014016'},
+    {title:'Virtual Walk Recap',         contentTag:'After walk post',                location:'Virtual',    date:'Jun 18',type:'Walk Recap', audience:'All followers',imp:1637,clicks:74,  ctr:0.0452,likes:26, comments:10,reposts:5, eng:0.0703,url:'https://www.linkedin.com/feed/update/urn:li:activity:7473205031899508736'},
+    {title:'Newcastle Walk Recap',       contentTag:'After walk post',                location:'Newcastle',  date:'Jun 18',type:'Walk Recap', audience:'All followers',imp:5650,clicks:2857,ctr:0.5057,likes:145,comments:16,reposts:5, eng:0.5350,url:'https://www.linkedin.com/feed/update/urn:li:activity:7473168904542941184'},
+    {title:'Calgary Walk Recap',         contentTag:'After walk post',                location:'Calgary',    date:'Jun 18',type:'Walk Recap', audience:'All followers',imp:1412,clicks:316, ctr:0.2238,likes:59, comments:1, reposts:6, eng:0.2705,url:'https://www.linkedin.com/feed/update/urn:li:activity:7473162969841958912'},
+    {title:'Vancouver Walk Recap',       contentTag:'After walk post',                location:'Vancouver',  date:'Jun 17',type:'Walk Recap', audience:'All followers',imp:3801,clicks:1480,ctr:0.3894,likes:84, comments:7, reposts:2, eng:0.4138,url:'https://www.linkedin.com/feed/update/urn:li:activity:7473136751725658112'},
+    {title:'Sydney Winter Walk Promo',   contentTag:'1 week out - LinkedIn post',     location:'Sydney',     date:'Jun 17',type:'Event Promo',audience:'Targeted',     imp:1058,clicks:206, ctr:0.1947,likes:15, comments:2, reposts:1, eng:0.2117,url:'https://www.linkedin.com/feed/update/urn:li:activity:7472931175284514818'},
+    {title:'Wollongong Walk Recap',      contentTag:'After walk post',                location:'Wollongong', date:'Jun 17',type:'Walk Recap', audience:'All followers',imp:4194,clicks:1191,ctr:0.2840,likes:113,comments:12,reposts:5, eng:0.3150,url:'https://www.linkedin.com/feed/update/urn:li:activity:7472810804069720065'},
+    {title:'Melbourne Walk Recap',       contentTag:'After walk post',                location:'Melbourne',  date:'Jun 12',type:'Walk Recap', audience:'All followers',imp:7393,clicks:2908,ctr:0.3933,likes:166,comments:14,reposts:11,eng:0.4192,url:'https://www.linkedin.com/feed/update/urn:li:activity:7470994857042284544'},
+    {title:'Adelaide Jun 25 Promo',      contentTag:'2 weeks out - Mentor post',      location:'Adelaide',   date:'Jun 10',type:'Event Promo',audience:'Targeted',     imp:541, clicks:276, ctr:0.5102,likes:9,  comments:2, reposts:1, eng:0.5323,url:'https://www.linkedin.com/feed/update/urn:li:activity:7470610769634779137'},
+    {title:'Auckland Jun 25 Promo',      contentTag:'2 weeks out - Mentor post',      location:'Auckland',   date:'Jun 10',type:'Event Promo',audience:'Targeted',     imp:73,  clicks:32,  ctr:0.4384,likes:7,  comments:0, reposts:2, eng:0.5616,url:'https://www.linkedin.com/feed/update/urn:li:activity:7470565462712471552'},
+    {title:'Parramatta Jun 10 Promo',    contentTag:'3 weeks out - Next Event',       location:'Parramatta', date:'Jun 10',type:'Event Promo',audience:'Targeted',     imp:1162,clicks:68,  ctr:0.0585,likes:25, comments:2, reposts:0, eng:0.0818,url:'https://www.linkedin.com/feed/update/urn:li:activity:7470369252588343297'},
+    {title:'Sydney Jun 26 Promo',        contentTag:'2 weeks out - Mentor post',      location:'Sydney',     date:'Jun 10',type:'Event Promo',audience:'Targeted',     imp:522, clicks:207, ctr:0.3966,likes:12, comments:0, reposts:2, eng:0.4234,url:'https://www.linkedin.com/feed/update/urn:li:activity:7470364662363000833'},
+    {title:'Calgary Jun 17 Promo',       contentTag:'2 weeks out - Mentor post',      location:'Calgary',    date:'Jun 4', type:'Event Promo',audience:'Targeted',     imp:100, clicks:23,  ctr:0.2300,likes:4,  comments:0, reposts:1, eng:0.2800,url:'https://www.linkedin.com/feed/update/urn:li:activity:7468328213941768192'},
+    {title:'Vancouver Jun 17 Promo',     contentTag:'2 weeks out - Mentor post',      location:'Vancouver',  date:'Jun 4', type:'Event Promo',audience:'Targeted',     imp:478, clicks:142, ctr:0.2971,likes:13, comments:0, reposts:2, eng:0.3285,url:'https://www.linkedin.com/feed/update/urn:li:activity:7468326965800968193'},
+    {title:'Sydney Mentor Spotlight',    contentTag:'3 weeks out - Next Event',       location:'Sydney',     date:'Jun 4', type:'Event Promo',audience:'Targeted',     imp:492, clicks:37,  ctr:0.0752,likes:8,  comments:0, reposts:0, eng:0.0915,url:'https://www.linkedin.com/feed/update/urn:li:activity:7468175207694761984'},
+    {title:'Dubai Hiring Post',          contentTag:'Job post',                       location:'Dubai',      date:'Jun 4', type:'General',    audience:'Targeted',     imp:664, clicks:51,  ctr:0.0768,likes:5,  comments:0, reposts:1, eng:0.0858,url:'https://www.linkedin.com/feed/update/urn:li:activity:7468164653974634497'},
+    {title:'Virtual Jun 18 Promo',       contentTag:'2 weeks out - Mentor post',      location:'Virtual',    date:'Jun 4', type:'Event Promo',audience:'All followers',imp:2401,clicks:503, ctr:0.2095,likes:28, comments:3, reposts:3, eng:0.2237,url:'https://www.linkedin.com/feed/update/urn:li:activity:7468125078837293056'},
+    {title:'Adelaide Community Video',   contentTag:'3 weeks out - CC Location Post', location:'Adelaide',   date:'Jun 4', type:'Video',      audience:'Targeted',     imp:993, clicks:87,  ctr:0.0876,likes:56, comments:2, reposts:0, eng:0.1460,url:'https://www.linkedin.com/feed/update/urn:li:activity:7468119374659227648'},
+    {title:'Sydney AI Mentor Video',     contentTag:'3 weeks out - CC Location Post', location:'Sydney',     date:'Jun 4', type:'Video',      audience:'Targeted',     imp:1013,clicks:61,  ctr:0.0602,likes:46, comments:3, reposts:3, eng:0.1115,url:'https://www.linkedin.com/feed/update/urn:li:activity:7468119350592491520'},
+    {title:'Newcastle Jun 18 Promo',     contentTag:'2 weeks out - Mentor post',      location:'Newcastle',  date:'Jun 3', type:'Event Promo',audience:'Targeted',     imp:96,  clicks:33,  ctr:0.3438,likes:0,  comments:0, reposts:2, eng:0.3646,url:'https://www.linkedin.com/feed/update/urn:li:activity:7468074093288792064'},
+    {title:'Auckland Jun 25 Promo 2',    contentTag:'3 weeks out - Next Event',       location:'Auckland',   date:'Jun 2', type:'Event Promo',audience:'Targeted',     imp:102, clicks:8,   ctr:0.0784,likes:1,  comments:0, reposts:0, eng:0.0882,url:'https://www.linkedin.com/feed/update/urn:li:activity:7467404246766833664'},
+    {title:'Adelaide Jun 25 Promo 2',    contentTag:'3 weeks out - Next Event',       location:'Adelaide',   date:'Jun 2', type:'Event Promo',audience:'Targeted',     imp:105, clicks:16,  ctr:0.1524,likes:0,  comments:0, reposts:0, eng:0.1524,url:'https://www.linkedin.com/feed/update/urn:li:activity:7467399747729870848'},
+    {title:'Wollongong Jun 17 Promo',    contentTag:'2 weeks out - Mentor post',      location:'Wollongong', date:'Jun 2', type:'Event Promo',audience:'Targeted',     imp:932, clicks:468, ctr:0.5021,likes:25, comments:0, reposts:1, eng:0.5300,url:'https://www.linkedin.com/feed/update/urn:li:activity:7467380147399184384'},
+    {title:'Auckland Community Promo',   contentTag:'4 weeks out - Sample Question',  location:'Auckland',   date:'Jun 1', type:'Event Promo',audience:'Targeted',     imp:63,  clicks:33,  ctr:0.5238,likes:1,  comments:0, reposts:0, eng:0.5397,url:'https://www.linkedin.com/feed/update/urn:li:activity:7467029005691424768'}
+  ]
+};
+
+const TYPE_PILL_MAP={'Walk Recap':'pill-recap','Event Promo':'pill-promo','Video':'pill-video','General':'pill-general'};
+const TYPE_COLOR_MAP={'Walk Recap':'#0A66C2','Event Promo':'#27AE60','Video':'#8E44AD','General':'#E67E22'};
+
+(function buildLinkedIn(){
+  const types=['Walk Recap','Event Promo','Video','General'];
+  const typeColors=['#0A66C2','#27AE60','#8E44AD','#E67E22'];
+  const typeCounts=types.map(t=>LI.posts.filter(p=>p.type===t).length);
+  const typeImps=types.map(t=>LI.posts.filter(p=>p.type===t).reduce((s,p)=>s+p.imp,0));
+  new Chart(document.getElementById('chartLiPostType'),{type:'doughnut',data:{labels:types,datasets:[{data:typeCounts,backgroundColor:typeColors,borderWidth:3,borderColor:'#fff',hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:14,usePointStyle:true}}}}});
+  new Chart(document.getElementById('chartLiTypeImp'),{type:'bar',data:{labels:types,datasets:[{data:typeImps,backgroundColor:typeColors,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#eaf0f6'},ticks:{callback:v=>fmtN(v)}}}}});
+
+  // Top 10 overview table
+  const top10=[...LI.posts].sort((a,b)=>b.imp-a.imp).slice(0,10);
+  const maxImp=top10[0].imp;
+  const tbody=document.getElementById('li-top-body');
+  top10.forEach((p,i)=>{const pct=(p.imp/maxImp*100).toFixed(0);tbody.innerHTML+=`<tr><td style="color:#aaa;font-size:12px">${i+1}</td><td style="font-weight:600;max-width:240px">${p.title}</td><td><span class="pill ${TYPE_PILL_MAP[p.type]}">${p.type}</span></td><td style="font-size:12px;color:#7f8c8d">${p.date}</td><td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:#0A66C2"></div></div><div class="bar-num" style="color:#004182">${fmtN(p.imp)}</div></div></td><td style="text-align:center">${fmtN(p.clicks)}</td><td style="text-align:center">${p.likes}</td><td style="text-align:center;font-weight:700;color:${p.eng>=0.35?'#1E8449':p.eng>=0.20?'#0A66C2':'#7f8c8d'}">${(p.eng*100).toFixed(1)}%</td><td><a href="${p.url}" target="_blank" class="li-link">View ↗</a></td></tr>`;});
+
+  // Daily charts
+  const evColors=LI.daily.map(d=>d.event?'#E74C3C':'#0A66C2');
+  const evRadius=LI.daily.map(d=>d.event?7:4);
+  new Chart(document.getElementById('chartLiDaily'),{type:'line',data:{labels:LI.daily.map(d=>d.date),datasets:[{label:'Impressions',data:LI.daily.map(d=>d.imp),borderColor:'#0A66C2',backgroundColor:'rgba(10,102,194,0.08)',fill:true,tension:0.3,pointBackgroundColor:evColors,pointRadius:evRadius,pointHoverRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{afterLabel:ctx=>{const d=LI.daily[ctx.dataIndex];return d.event?`Event: ${d.event}`:'';}} }},scales:{x:{grid:{color:'#eaf0f6'},ticks:{font:{size:10},maxRotation:45}},y:{grid:{color:'#eaf0f6'},ticks:{callback:v=>fmtN(v)}}}}});
+  new Chart(document.getElementById('chartLiEngRate'),{type:'line',data:{labels:LI.daily.map(d=>d.date),datasets:[{label:'Engagement Rate',data:LI.daily.map(d=>+(d.eng*100).toFixed(1)),borderColor:'#27AE60',backgroundColor:'rgba(39,174,96,0.08)',fill:true,tension:0.3,pointBackgroundColor:evColors,pointRadius:evRadius}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#eaf0f6'},ticks:{font:{size:10},maxRotation:45}},y:{grid:{color:'#eaf0f6'},ticks:{callback:v=>v+'%'}}}}});
+
+  // Daily table
+  const dailyBody=document.getElementById('li-daily-body');
+  LI.daily.forEach(d=>{const ev=d.event?`<span style="font-size:9px;background:#FADBD8;color:#C0392B;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700">EVENT</span>`:'';dailyBody.innerHTML+=`<tr><td style="font-weight:${d.event?700:400}">${d.date}${ev}</td><td style="text-align:center">${fmtN(d.imp)}</td><td style="text-align:center">${fmtN(d.uniq)}</td><td style="text-align:center;font-weight:700;color:#0A66C2">${fmtN(d.clicks)}</td><td style="text-align:center">${d.react}</td><td style="text-align:center">${d.comm}</td><td style="text-align:center">${d.rep}</td><td style="text-align:center;font-weight:700;color:${d.eng>=0.35?'#1E8449':d.eng>=0.20?'#0A66C2':'#7f8c8d'}">${(d.eng*100).toFixed(1)}%</td></tr>`;});
+
+  // All Posts chart + table
+  const top15=[...LI.posts].sort((a,b)=>b.imp-a.imp).slice(0,15);
+  new Chart(document.getElementById('chartLiAllPosts'),{type:'bar',data:{labels:top15.map(p=>p.title),datasets:[{data:top15.map(p=>p.imp),backgroundColor:top15.map(p=>TYPE_COLOR_MAP[p.type]),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{afterLabel:ctx=>`Eng. Rate: ${(top15[ctx.dataIndex].eng*100).toFixed(1)}%`}}},scales:{x:{grid:{color:'#eaf0f6'},ticks:{callback:v=>fmtN(v)}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+  const postsBody=document.getElementById('li-posts-body');let tI=0,tCl=0,tR=0;
+  LI.posts.forEach((p,i)=>{tI+=p.imp;tCl+=p.clicks;tR+=p.likes;postsBody.innerHTML+=`<tr><td style="color:#aaa;font-size:12px">${i+1}</td><td style="font-weight:600;max-width:200px;font-size:12px">${p.title}</td><td><span class="tag-chip">${p.contentTag}</span></td><td><span class="loc-chip">${p.location}</span></td><td style="font-size:11px;color:#7f8c8d">${p.audience}</td><td style="font-size:12px">${p.date}</td><td style="text-align:center">${fmtN(p.imp)}</td><td style="text-align:center">${fmtN(p.clicks)}</td><td style="text-align:center;font-weight:700;color:#0A66C2">${(p.ctr*100).toFixed(1)}%</td><td style="text-align:center">${p.likes}</td><td style="text-align:center;font-weight:700;color:${p.eng>=0.35?'#1E8449':p.eng>=0.20?'#0A66C2':'#7f8c8d'}">${(p.eng*100).toFixed(1)}%</td><td><a href="${p.url}" target="_blank" class="li-link">View ↗</a></td></tr>`;});
+  document.getElementById('li-total-imp').textContent=fmtN(tI);document.getElementById('li-total-clicks').textContent=fmtN(tCl);document.getElementById('li-total-react').textContent=tR;
+})();
+
+// ── Content Tags & Location ──
+(function buildTagsAndLocations(){
+  // Aggregate by content tag
+  const tagMap={};
+  LI.posts.forEach(p=>{
+    if(!tagMap[p.contentTag])tagMap[p.contentTag]={posts:0,imp:0,ctrSum:0,erSum:0};
+    tagMap[p.contentTag].posts++;tagMap[p.contentTag].imp+=p.imp;tagMap[p.contentTag].ctrSum+=p.ctr;tagMap[p.contentTag].erSum+=p.eng;
+  });
+  const tags=Object.entries(tagMap).map(([tag,d])=>({tag,posts:d.posts,totalImp:d.imp,avgCTR:d.ctrSum/d.posts,avgER:d.erSum/d.posts})).sort((a,b)=>b.avgER-a.avgER);
+
+  // Aggregate by location
+  const locMap={};
+  LI.posts.forEach(p=>{
+    if(!locMap[p.location])locMap[p.location]={posts:0,imp:0,ctrSum:0,erSum:0};
+    locMap[p.location].posts++;locMap[p.location].imp+=p.imp;locMap[p.location].ctrSum+=p.ctr;locMap[p.location].erSum+=p.eng;
+  });
+  const locs=Object.entries(locMap).map(([loc,d])=>({loc,posts:d.posts,totalImp:d.imp,avgCTR:d.ctrSum/d.posts,avgER:d.erSum/d.posts})).sort((a,b)=>b.totalImp-a.totalImp);
+
+  // Content tag chart — grouped ER vs CTR
+  const tagLabels=tags.map(t=>t.tag);
+  new Chart(document.getElementById('chartTagPerf'),{
+    type:'bar',
+    data:{labels:tagLabels,datasets:[
+      {label:'Avg Engagement Rate',data:tags.map(t=>+(t.avgER*100).toFixed(1)),backgroundColor:'#0A66C2',borderRadius:4,borderSkipped:false},
+      {label:'Avg CTR',            data:tags.map(t=>+(t.avgCTR*100).toFixed(1)),backgroundColor:'#27AE60',borderRadius:4,borderSkipped:false}
+    ]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},usePointStyle:true,padding:14}}},scales:{x:{grid:{color:'#eaf0f6'},ticks:{callback:v=>v+'%'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+  });
+
+  // Tag table
+  const tagBody=document.getElementById('li-tag-body');
+  const maxER=tags[0].avgER;
+  tags.forEach(t=>{
+    const erPct=(t.avgER*100).toFixed(1);const ctrPct=(t.avgCTR*100).toFixed(1);const bw=(t.avgER/maxER*100).toFixed(0);
+    tagBody.innerHTML+=`<tr>
+      <td><span class="tag-chip">${t.tag}</span></td>
+      <td style="text-align:center">${t.posts}</td>
+      <td style="text-align:center">${fmtN(t.totalImp)}</td>
+      <td style="text-align:center;font-weight:700;color:#27AE60">${ctrPct}%</td>
+      <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${bw}%;background:#0A66C2"></div></div><div class="bar-num" style="color:#004182">${erPct}%</div></div></td>
+    </tr>`;
+  });
+
+  // Location charts
+  new Chart(document.getElementById('chartLocImp'),{type:'bar',data:{labels:locs.map(l=>l.loc),datasets:[{data:locs.map(l=>l.totalImp),backgroundColor:'#0A66C2',borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#eaf0f6'},ticks:{callback:v=>fmtN(v)}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+  new Chart(document.getElementById('chartLocPerf'),{type:'bar',data:{labels:locs.map(l=>l.loc),datasets:[
+    {label:'Avg ER', data:locs.map(l=>+(l.avgER*100).toFixed(1)),backgroundColor:'#0A66C2',borderRadius:3,borderSkipped:false},
+    {label:'Avg CTR',data:locs.map(l=>+(l.avgCTR*100).toFixed(1)),backgroundColor:'#27AE60',borderRadius:3,borderSkipped:false}
+  ]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},usePointStyle:true,padding:10}}},scales:{x:{grid:{color:'#eaf0f6'},ticks:{callback:v=>v+'%'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+
+  // Location table
+  const locBody=document.getElementById('li-loc-body');
+  const maxImp=locs[0].totalImp;
+  locs.forEach(l=>{
+    const bw=(l.totalImp/maxImp*100).toFixed(0);
+    locBody.innerHTML+=`<tr>
+      <td><span class="loc-chip">${l.loc}</span></td>
+      <td style="text-align:center">${l.posts}</td>
+      <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${bw}%;background:#0A66C2"></div></div><div class="bar-num" style="color:#004182">${fmtN(l.totalImp)}</div></div></td>
+      <td style="text-align:center;font-weight:700;color:#27AE60">${(l.avgCTR*100).toFixed(1)}%</td>
+      <td style="text-align:center;font-weight:700;color:${l.avgER>=0.35?'#1E8449':l.avgER>=0.20?'#0A66C2':'#7f8c8d'}">${(l.avgER*100).toFixed(1)}%</td>
+    </tr>`;
+  });
+})();
+</script>
+</body>
+</html>
